@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher icon: a water-heater tank with a flame, the flame in the dashboard's "on" orange.
+  Everything sits inside the 66dp safe zone (21..87) of the 108dp adaptive canvas.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- tank -->
+    <path
+        android:pathData="M40,30 Q40,26 44,26 L64,26 Q68,26 68,30 L68,76 Q68,80 64,80 L44,80 Q40,80 40,76 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#ECEBE7"
+        android:strokeWidth="3" />
+    <!-- pipes -->
+    <path
+        android:pathData="M48,26 L48,21 M60,26 L60,21"
+        android:strokeColor="#ECEBE7"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+    <!-- legs -->
+    <path
+        android:pathData="M45,80 L45,85 M63,80 L63,85"
+        android:strokeColor="#ECEBE7"
+        android:strokeWidth="3"
+        android:strokeLineCap="round" />
+    <!-- flame -->
+    <path
+        android:pathData="M54,40 C58,46 62,50 62,57 C62,62 58.5,66 54,66 C49.5,66 46,62 46,57 C46,53 48,50.5 50,48.5 C50,52 51.5,54 53.5,54.5 C53,50 52.5,45 54,40 Z"
+        android:fillColor="#FB923C" />
+    <path
+        android:pathData="M54,56 C56,58.5 57.5,60 57.5,62 C57.5,64 56,65.5 54,65.5 C52,65.5 50.5,64 50.5,62 C50.5,60 52,58.5 54,56 Z"
+        android:fillColor="#FDE68A" />
+</vector>

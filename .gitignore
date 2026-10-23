@@ -1,0 +1,14 @@
+*.iml
+.gradle/
+/local.properties
+.idea/
+.DS_Store
+/build
+/captures
+*.apk
+*.aab
+app/build/
+
+# Never commit signing keys — they go in GitHub Actions secrets instead.
+*.jks
+*.keystore

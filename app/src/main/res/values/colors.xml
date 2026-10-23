@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Warm dark ground, matching the dashboard's dark mode. -->
+    <color name="ic_launcher_background">#1F1E1C</color>
+    <color name="window_light">#F6F5F2</color>
+    <color name="window_dark">#141413</color>
+</resources>
