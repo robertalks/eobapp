@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,13 @@ data class HomeState(
     val refreshedAt: Long? = null,
 )
 
+/** Progress of a target-temperature change from the app. */
+sealed class TargetEdit {
+    data object Saving : TargetEdit()
+    data class Done(val message: String) : TargetEdit()
+    data class Failed(val message: String) : TargetEdit()
+}
+
 sealed class TestResult {
     data object Running : TestResult()
     data class Ok(val summary: String) : TestResult()
@@ -53,9 +61,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _test = MutableStateFlow<TestResult?>(null)
     val test: StateFlow<TestResult?> = _test.asStateFlow()
 
+    private val _targetEdit = MutableStateFlow<TargetEdit?>(null)
+    val targetEdit: StateFlow<TargetEdit?> = _targetEdit.asStateFlow()
+
     private var refreshJob: Job? = null
 
-    private fun api() = EobApi(settings.getHost(), settings.getClientId(), settings.getClientSecret())
+    private fun api() = EobApi(
+        settings.getHost(), settings.getClientId(), settings.getClientSecret(), settings.getControlToken()
+    )
+
+    /** Changes the low-tariff target (null = back to the scheduler's own setting). */
+    fun setTarget(celsius: Double?) {
+        if (_targetEdit.value is TargetEdit.Saving) return
+        _targetEdit.value = TargetEdit.Saving
+        viewModelScope.launch {
+            try {
+                val r = if (celsius == null) api().clearTarget() else api().setTarget(celsius)
+                val t = r.target
+                // Show the new value straight away; the scheduler re-reads the thermostat a few
+                // seconds later, and the refresh below picks that up.
+                _home.update { st ->
+                    val status = st.status
+                    val control = status?.control
+                    if (status == null || control == null) st
+                    else st.copy(
+                        status = status.copy(
+                            control = control.copy(target = t, source = if (celsius == null) control.source else "app")
+                        )
+                    )
+                }
+                val value = if (t != null) "%.1f °C".format(t) else "the scheduler default"
+                _targetEdit.value = TargetEdit.Done(
+                    if (r.appliedNow == true) "Target set to $value."
+                    else "Saved $value — the heater stays off during high tariff and uses it from the next low tariff."
+                )
+                delay(4_000)
+                refreshJob?.cancel()
+                refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _targetEdit.value = TargetEdit.Failed(message(e))
+            }
+        }
+    }
+
+    fun clearTargetEdit() {
+        if (_targetEdit.value !is TargetEdit.Saving) _targetEdit.value = null
+    }
 
     /** Loads status, the chart range and the 14-day runtime together. */
     fun refresh() {
@@ -102,8 +155,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         refresh()
     }
 
-    fun saveSettings(host: String, clientId: String, clientSecret: String) {
-        settings.save(host, clientId, clientSecret)
+    fun saveSettings(host: String, clientId: String, clientSecret: String, controlToken: String) {
+        settings.save(host, clientId, clientSecret, controlToken)
         // Data from a previous server must not linger under the new address.
         _home.value = HomeState(rangeHours = _home.value.rangeHours)
         refreshJob?.cancel()
@@ -116,12 +169,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _test.value = try {
                 val s = EobApi(host, clientId.trim(), clientSecret.trim()).status()
+                val ctl = s.control
+                val control = when {
+                    ctl == null -> " · this scheduler can't change the temperature yet"
+                    ctl.enabled != true -> " · temperature control is off in config.yaml"
+                    else -> " · temperature control available"
+                }
                 if (s.ok == true && s.measured != null) {
                     TestResult.Ok(
-                        "Connected — %.1f °C, heater %s".format(s.measured, if (s.relay == true) "ON" else "OFF")
+                        "Connected — %.1f °C, heater %s".format(s.measured, if (s.relay == true) "ON" else "OFF") + control
                     )
                 } else {
-                    TestResult.Ok("Connected — no readings stored yet")
+                    TestResult.Ok("Connected — no readings stored yet$control")
                 }
             } catch (e: CancellationException) {
                 throw e

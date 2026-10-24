@@ -24,6 +24,28 @@ data class StatusResponse(
     @SerializedName("mode") val mode: String? = null,
     /** Unix seconds when the relay last switched. */
     @SerializedName("since") val since: Long? = null,
+    /** Absent on schedulers without the control API. */
+    @SerializedName("control") val control: ControlInfo? = null,
+)
+
+/** What the scheduler allows the app to change (part of /api/status). */
+data class ControlInfo(
+    @SerializedName("enabled") val enabled: Boolean? = null,
+    @SerializedName("min") val min: Double? = null,
+    @SerializedName("max") val max: Double? = null,
+    @SerializedName("step") val step: Double? = null,
+    /** The temperature low-tariff periods run at. */
+    @SerializedName("target") val target: Double? = null,
+    /** "app" when set from here, otherwise the scheduler's temperature_source ("config"/"device"). */
+    @SerializedName("source") val source: String? = null,
+)
+
+/** Answer to POST/DELETE /api/target. */
+data class TargetResult(
+    @SerializedName("ok") val ok: Boolean? = null,
+    @SerializedName("target") val target: Double? = null,
+    /** false during high tariff: the heater stays off, the target applies at the next low tariff. */
+    @SerializedName("applied_now") val appliedNow: Boolean? = null,
 )
 
 data class TariffChange(

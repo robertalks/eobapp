@@ -5,8 +5,8 @@ view as the scheduler's web dashboard — current and target temperature, heater
 electricity tariff, a temperature chart and heater runtime per day — reading the scheduler's
 JSON API directly.
 
-Read-only by design: the app shows what the scheduler and the thermostat are doing, it doesn't
-control anything.
+It shows what the scheduler and the thermostat are doing, and can change the **low-tariff
+target temperature** — nothing else; the scheduler stays in charge of when the heater may run.
 
 ---
 
@@ -44,6 +44,19 @@ reports that in plain words rather than showing a parse error.
 The address is always used over HTTPS. Settings are stored with `EncryptedSharedPreferences`
 (keys in the Android keystore) and are excluded from Android backups.
 
+## Changing the target temperature
+
+Tap the **Target temperature** tile (it shows a pencil when the scheduler allows it) and pick
+a value with − / + in 0.5 °C steps. The scheduler uses it for every low-tariff period: during
+low tariff it's applied immediately; during high tariff the heater stays off and the tile shows
+"low tariff: …" — the value it will run at next. **Reset to scheduler default** goes back to the
+scheduler's own setting.
+
+This needs eob_scheduler with the control API, `control.enabled: true` and a `control.token`
+in its `config.yaml`, and the same token entered as **Control token** in the app's Settings.
+The token is separate from the Cloudflare service token: Cloudflare decides who may reach the
+scheduler at all, the control token who may change the heater.
+
 ## API used
 
 All from `eob_stats.py` in eob_scheduler:
@@ -53,6 +66,8 @@ All from `eob_stats.py` in eob_scheduler:
 | `GET /api/status` | the four tiles |
 | `GET /api/history?hours=6\|24\|168` | the temperature chart |
 | `GET /api/daily?days=14` | heater runtime per day |
+| `POST /api/target` `{"target": 18.5}` | change the low-tariff target (control token) |
+| `DELETE /api/target` | back to the scheduler default (control token) |
 
 ## Building
 

@@ -1,6 +1,7 @@
 package com.eobapp.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,9 +36,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +51,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.eobapp.app.MainViewModel
 import com.eobapp.app.RANGES
+import com.eobapp.app.TargetEdit
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.ui.charts.Legend
 import com.eobapp.app.ui.charts.RuntimeChart
@@ -62,7 +69,37 @@ private const val REFRESH_MS = 60_000L
 @Composable
 fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.home.collectAsState()
+    val targetEdit by viewModel.targetEdit.collectAsState()
     val c = LocalEobColors.current
+    var showTargetDialog by remember { mutableStateOf(false) }
+
+    // A successful change closes the dialog; its message then shows on Home for a few seconds.
+    LaunchedEffect(targetEdit) {
+        if (targetEdit is TargetEdit.Done) {
+            showTargetDialog = false
+            delay(6_000)
+            viewModel.clearTargetEdit()
+        }
+    }
+
+    val control = state.status?.control
+    if (showTargetDialog && control != null) {
+        TargetDialog(
+            control = control,
+            hasToken = viewModel.settings.getControlToken().isNotBlank(),
+            edit = targetEdit,
+            onSet = { viewModel.setTarget(it) },
+            onReset = { viewModel.setTarget(null) },
+            onOpenSettings = {
+                showTargetDialog = false
+                onOpenSettings()
+            },
+            onDismiss = {
+                showTargetDialog = false
+                viewModel.clearTargetEdit()
+            }
+        )
+    }
 
     // Refresh every minute, but only while the screen is actually visible — nothing runs in the
     // background, and coming back to the app refreshes straight away.
@@ -124,7 +161,28 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     CircularProgressIndicator()
                 }
             } else {
-                Tiles(status, state.refreshedAt, nowMs)
+                Tiles(
+                    status, state.refreshedAt, nowMs,
+                    onEditTarget = if (control?.enabled == true) {
+                        { viewModel.clearTargetEdit(); showTargetDialog = true }
+                    } else null
+                )
+
+                (targetEdit as? TargetEdit.Done)?.let { done ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = c.card,
+                        border = BorderStroke(1.dp, c.good)
+                    ) {
+                        Text(
+                            done.message,
+                            color = c.good,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        )
+                    }
+                }
 
                 Card {
                     Row(
@@ -178,7 +236,7 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
 
 /** The four status tiles, same wording and colours as the web dashboard. */
 @Composable
-private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long) {
+private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long, onEditTarget: (() -> Unit)?) {
     val c = LocalEobColors.current
     val hasReading = s?.ok == true && s.measured != null
     val nowSec = nowMs / 1000
@@ -202,6 +260,8 @@ private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long) {
             modifier = Modifier.weight(1f)
         )
         val target = s?.desired
+        val lowTarget = s?.control?.target
+        val forcedOff = hasReading && target != null && target <= 0
         Tile(
             label = "Target temperature",
             value = when {
@@ -209,8 +269,15 @@ private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long) {
                 target > 0 -> "%.1f °C".format(target)
                 else -> "OFF"
             },
-            valueColor = if (hasReading && target != null && target <= 0) c.bad else c.ink,
-            sub = if (s?.mode == "off") "forced off" else "",
+            valueColor = if (forcedOff) c.bad else c.ink,
+            sub = when {
+                // During high tariff, say what the heater will run at when it comes back.
+                forcedOff && lowTarget != null -> "low tariff: %.1f °C".format(lowTarget)
+                s?.mode == "off" -> "forced off"
+                s?.control?.source == "app" -> "set from app"
+                else -> ""
+            },
+            onClick = onEditTarget,
             modifier = Modifier.weight(1f)
         )
     }
@@ -246,16 +313,36 @@ private fun Tile(
     modifier: Modifier = Modifier,
     valueColor: Color = LocalEobColors.current.ink,
     subColor: Color = LocalEobColors.current.mute,
+    onClick: (() -> Unit)? = null,
 ) {
     val c = LocalEobColors.current
+    val shape = MaterialTheme.shapes.medium
     Surface(
-        modifier = modifier.fillMaxHeight(),
-        shape = MaterialTheme.shapes.medium,
+        modifier = modifier
+            .fillMaxHeight()
+            .clip(shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = shape,
         color = c.card,
         border = BorderStroke(1.dp, c.line)
     ) {
         Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-            Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = c.mute)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = c.mute,
+                    modifier = Modifier.weight(1f)
+                )
+                if (onClick != null) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Change",
+                        tint = c.mute,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             Spacer(Modifier.height(2.dp))
             Text(
                 value,

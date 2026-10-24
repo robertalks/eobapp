@@ -34,11 +34,15 @@ class SettingsRepository(context: Context) {
 
     fun getClientSecret(): String = prefs.getString(KEY_CLIENT_SECRET, "") ?: ""
 
-    fun save(host: String, clientId: String, clientSecret: String) =
+    /** eob_scheduler's control.token; only needed to change the target temperature. */
+    fun getControlToken(): String = prefs.getString(KEY_CONTROL_TOKEN, "") ?: ""
+
+    fun save(host: String, clientId: String, clientSecret: String, controlToken: String) =
         prefs.edit()
             .putString(KEY_HOST, EobApi.normalizeHost(host))
             .putString(KEY_CLIENT_ID, clientId.trim())
             .putString(KEY_CLIENT_SECRET, clientSecret.trim())
+            .putString(KEY_CONTROL_TOKEN, controlToken.trim())
             .apply()
 
     /** The host is the only thing strictly required; the token is needed behind Access. */
@@ -49,5 +53,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_HOST = "host"
         private const val KEY_CLIENT_ID = "cf_client_id"
         private const val KEY_CLIENT_SECRET = "cf_client_secret"
+        private const val KEY_CONTROL_TOKEN = "control_token"
     }
 }

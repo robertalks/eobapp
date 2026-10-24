@@ -68,6 +68,8 @@ fun SettingsScreen(
     var clientId by remember { mutableStateOf(viewModel.settings.getClientId()) }
     var clientSecret by remember { mutableStateOf(viewModel.settings.getClientSecret()) }
     var showSecret by remember { mutableStateOf(false) }
+    var controlToken by remember { mutableStateOf(viewModel.settings.getControlToken()) }
+    var showToken by remember { mutableStateOf(false) }
 
     // A result from an earlier visit would be misleading next time the screen opens.
     DisposableEffect(Unit) { onDispose { viewModel.clearTest() } }
@@ -129,12 +131,27 @@ fun SettingsScreen(
                 label = { Text("Service token Client Secret") },
                 singleLine = true,
                 visualTransformation = if (showSecret) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
                 trailingIcon = {
                     TextButton(onClick = { showSecret = !showSecret }) {
                         Text(if (showSecret) "Hide" else "Show")
                     }
                 },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = controlToken,
+                onValueChange = { controlToken = it },
+                label = { Text("Control token (optional)") },
+                singleLine = true,
+                visualTransformation = if (showToken) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                trailingIcon = {
+                    TextButton(onClick = { showToken = !showToken }) {
+                        Text(if (showToken) "Hide" else "Show")
+                    }
+                },
+                supportingText = { Text("control → token from eob_scheduler's config.yaml; needed to change the temperature") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -145,7 +162,7 @@ fun SettingsScreen(
                 ) { Text("Test connection") }
                 Button(
                     onClick = {
-                        viewModel.saveSettings(host, clientId, clientSecret)
+                        viewModel.saveSettings(host, clientId, clientSecret, controlToken)
                         onSaved()
                     },
                     enabled = host.isNotBlank()
