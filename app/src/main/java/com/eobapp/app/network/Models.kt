@@ -95,3 +95,23 @@ data class DailyRuntime(
 ) {
     val total: Int get() = low + high + unknown
 }
+
+/** GET /api/cycles?hours=N — one heating cycle (relay ON → OFF). */
+data class CyclesResponse(
+    @SerializedName("since") val since: Long? = null,
+    @SerializedName("cycles") val cycles: List<HeatingCycle>? = null,
+)
+
+data class HeatingCycle(
+    @SerializedName("start") val start: Long = 0,
+    /** null while still heating. */
+    @SerializedName("end") val end: Long? = null,
+    @SerializedName("seconds") val seconds: Long = 0,
+    @SerializedName("start_temp") val startTemp: Double? = null,
+    @SerializedName("end_temp") val endTemp: Double? = null,
+    @SerializedName("target") val target: Double? = null,
+    @SerializedName("low_tariff") val lowTariff: Boolean? = null,
+    @SerializedName("ongoing") val ongoing: Boolean = false,
+    /** Readings were lost mid-cycle, so the duration is a lower bound. */
+    @SerializedName("gap") val gap: Boolean = false,
+)

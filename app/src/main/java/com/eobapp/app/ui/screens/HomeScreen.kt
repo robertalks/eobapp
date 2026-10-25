@@ -1,8 +1,10 @@
 package com.eobapp.app.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,8 +54,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.eobapp.app.MainViewModel
 import com.eobapp.app.RANGES
+import com.eobapp.app.CYCLE_RANGES
 import com.eobapp.app.TargetEdit
 import com.eobapp.app.network.StatusResponse
+import com.eobapp.app.network.HeatingCycle
 import com.eobapp.app.ui.charts.Legend
 import com.eobapp.app.ui.charts.RuntimeChart
 import com.eobapp.app.ui.charts.TemperatureChart
@@ -220,6 +225,42 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     Legend(listOf(c.good to "low tariff", c.bad to "high tariff", c.unknown to "unknown"))
                 }
 
+                if (state.cyclesSupported) {
+                    Card {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Recent heating", style = MaterialTheme.typography.titleMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                for (h in CYCLE_RANGES) {
+                                    FilterChip(
+                                        selected = state.cyclesHours == h,
+                                        onClick = { viewModel.setCyclesRange(h) },
+                                        label = { Text(if (h < 168) "$h h" else "${h / 24} d") }
+                                    )
+                                }
+                            }
+                        }
+                        if (state.cycles.isEmpty()) {
+                            Text("No heating in this period.", style = MaterialTheme.typography.bodySmall, color = c.mute)
+                        } else {
+                            state.cycles.forEachIndexed { i, cy ->
+                                if (i > 0) HorizontalDivider(color = c.line)
+                                CycleRow(cy, nowMs)
+                            }
+                            val totalSec = state.cycles.sumOf { it.seconds }
+                            Text(
+                                "${state.cycles.size} cycle${if (state.cycles.size > 1) "s" else ""} · ${duration(totalSec)} total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = c.mute,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+                    }
+                }
+
                 state.refreshedAt?.let {
                     Text(
                         "Updated " + SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it)) +
@@ -385,6 +426,75 @@ private fun ErrorCard(message: String, onRetry: () -> Unit) {
             Text(message, color = c.bad, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = onRetry) { Text("Retry") }
         }
+    }
+}
+
+@Composable
+private fun CycleRow(cy: HeatingCycle, nowMs: Long) {
+    val c = LocalEobColors.current
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                "${hm(cy.start)} – ${if (cy.ongoing) "now" else hm(cy.end)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (cy.ongoing) c.good else c.ink
+            )
+            val startTemp = cy.startTemp?.let { "started %.1f °C".format(it) }
+            Text(
+                listOfNotNull(cycleDay(cy.start), startTemp).joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = c.mute
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            val secs = if (cy.ongoing) nowMs / 1000 - cy.start else cy.seconds
+            Text(
+                (if (cy.gap) "≥ " else "") + duration(secs),
+                style = MaterialTheme.typography.bodyMedium,
+                color = c.ink
+            )
+            Spacer(Modifier.height(3.dp))
+            TariffPill(cy.lowTariff)
+        }
+    }
+}
+
+@Composable
+private fun TariffPill(low: Boolean?) {
+    val c = LocalEobColors.current
+    val (bg, label) = when (low) {
+        true -> c.good to "LOW"
+        false -> c.bad to "HIGH"
+        null -> c.unknown to "—"
+    }
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(bg)
+            .padding(horizontal = 7.dp, vertical = 1.dp)
+    ) {
+        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+private fun hm(epochSec: Long?): String =
+    if (epochSec == null) "…" else SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(epochSec * 1000))
+
+/** "Today", "Yesterday", or "5 Oct". */
+private fun cycleDay(epochSec: Long): String {
+    val d = Calendar.getInstance().apply { timeInMillis = epochSec * 1000 }
+    val today = Calendar.getInstance()
+    val yesterday = (today.clone() as Calendar).apply { add(Calendar.DAY_OF_MONTH, -1) }
+    fun sameDay(a: Calendar, b: Calendar) =
+        a.get(Calendar.YEAR) == b.get(Calendar.YEAR) &&
+            a.get(Calendar.DAY_OF_YEAR) == b.get(Calendar.DAY_OF_YEAR)
+    return when {
+        sameDay(d, today) -> "Today"
+        sameDay(d, yesterday) -> "Yesterday"
+        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochSec * 1000))
     }
 }
 

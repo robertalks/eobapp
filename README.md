@@ -14,7 +14,9 @@ target temperature** — nothing else; the scheduler stays in charge of when the
 
 - **Home** — four tiles (Current temperature, Target temperature, Heater status, Electricity
   tariff), a temperature chart (6 h / 24 h / 7 d) with heater-on and low-tariff periods shaded,
-  and heater runtime per day for the last 14 days, split into low and high tariff. Heater ON and
+  heater runtime per day for the last 14 days, split into low and high tariff, and a
+  **Recent heating** list (24 h / 48 h / 7 d) showing each heating cycle: when it started and
+  ended, how long it ran, the temperature it started at, and the tariff. Heater ON and
   LOW tariff are green, OFF and HIGH are red — same as the web page.
   Refreshes every minute while it's on screen, and straight away when you come back to it.
   Nothing runs in the background.
@@ -66,6 +68,7 @@ All from `eob_stats.py` in eob_scheduler:
 | `GET /api/status` | the four tiles |
 | `GET /api/history?hours=6\|24\|168` | the temperature chart |
 | `GET /api/daily?days=14` | heater runtime per day |
+| `GET /api/cycles?hours=48` | recent heating cycles (start/end, duration, start temp) |
 | `POST /api/target` `{"target": 18.5}` | change the low-tariff target (control token) |
 | `DELETE /api/target` | back to the scheduler default (control token) |
 

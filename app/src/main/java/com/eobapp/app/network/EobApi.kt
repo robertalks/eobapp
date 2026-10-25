@@ -62,6 +62,10 @@ class EobApi(
         return request<List<DailyRuntime>>("GET", "/api/daily?days=$days", null, type)
     }
 
+    suspend fun cycles(hours: Int, limit: Int = 100): CyclesResponse =
+        request<CyclesResponse>("GET", "/api/cycles?hours=$hours&limit=$limit", null,
+            CyclesResponse::class.java)
+
     /** Sets the low-tariff target; the scheduler rounds to its 0.5 °C step. */
     suspend fun setTarget(celsius: Double): TargetResult {
         val json = JsonObject().apply { addProperty("target", celsius) }.toString()

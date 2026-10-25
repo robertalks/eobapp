@@ -4,7 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.eobapp.app.network.ApiException
+import com.eobapp.app.network.CyclesResponse
 import com.eobapp.app.network.DailyRuntime
+import com.eobapp.app.network.HeatingCycle
+import com.eobapp.app.network.HistoryResponse
 import com.eobapp.app.network.EobApi
 import com.eobapp.app.network.Reading
 import com.eobapp.app.network.StatusResponse
@@ -24,18 +27,33 @@ import kotlinx.coroutines.launch
 /** Chart ranges offered on Home, in hours. */
 val RANGES = listOf(6, 24, 168)
 
+/** Ranges offered for the "Recent heating" list, in hours. */
+val CYCLE_RANGES = listOf(24, 48, 168)
+
 data class HomeState(
     val status: StatusResponse? = null,
     val readings: List<Reading> = emptyList(),
     /** Seconds between readings, from the server; used to bridge or break chart lines. */
     val interval: Int = 60,
     val daily: List<DailyRuntime> = emptyList(),
+    val cycles: List<HeatingCycle> = emptyList(),
+    /** False when the scheduler is too old to have /api/cycles. */
+    val cyclesSupported: Boolean = true,
     val rangeHours: Int = 24,
+    val cyclesHours: Int = 48,
     val loading: Boolean = false,
     /** Last refresh failed; earlier data (if any) is still shown underneath. */
     val error: String? = null,
     /** Phone clock (ms) of the last successful refresh. */
     val refreshedAt: Long? = null,
+)
+
+/** One refresh's worth of data; cycles is null when the scheduler has no /api/cycles. */
+private data class Refreshed(
+    val status: StatusResponse,
+    val history: HistoryResponse,
+    val daily: List<DailyRuntime>,
+    val cycles: CyclesResponse?,
 )
 
 /** Progress of a target-temperature change from the app. */
@@ -118,22 +136,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _home.update { it.copy(loading = true) }
             val api = api()
             val hours = _home.value.rangeHours
+            val cyclesHours = _home.value.cyclesHours
             try {
                 // coroutineScope, not bare async in launch: a failed request then surfaces
                 // here as an ordinary exception instead of cancelling the ViewModel's job and
                 // reaching the uncaught-exception handler (which would crash the app).
-                val (status, history, daily) = coroutineScope {
+                val result = coroutineScope {
                     val s = async { api.status() }
                     val h = async { api.history(hours) }
                     val d = async { api.daily(14) }
-                    Triple(s.await(), h.await(), d.await())
+                    // Cycles is an add-on: an older scheduler has no /api/cycles, so its
+                    // failure must not take the rest of the screen down with it.
+                    val cy = async { runCatching { api.cycles(cyclesHours) }.getOrNull() }
+                    Refreshed(s.await(), h.await(), d.await(), cy.await())
                 }
                 _home.update {
                     it.copy(
-                        status = status,
-                        readings = history.readings(),
-                        interval = history.interval ?: 60,
-                        daily = daily,
+                        status = result.status,
+                        readings = result.history.readings(),
+                        interval = result.history.interval ?: 60,
+                        daily = result.daily,
+                        cycles = result.cycles?.cycles ?: emptyList(),
+                        cyclesSupported = result.cycles != null,
                         loading = false,
                         error = null,
                         refreshedAt = System.currentTimeMillis(),
@@ -151,6 +175,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (hours == _home.value.rangeHours) return
         _home.update { it.copy(rangeHours = hours, readings = emptyList()) }
         // A refresh already in flight is for the old range; restart it.
+        refreshJob?.cancel()
+        refresh()
+    }
+
+    fun setCyclesRange(hours: Int) {
+        if (hours == _home.value.cyclesHours) return
+        _home.update { it.copy(cyclesHours = hours) }
         refreshJob?.cancel()
         refresh()
     }
