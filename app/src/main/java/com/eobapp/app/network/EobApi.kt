@@ -80,6 +80,20 @@ class EobApi(
     suspend fun clearTarget(): TargetResult =
         request<TargetResult>("DELETE", "/api/target", null, TargetResult::class.java)
 
+    /** Sets a time-bounded override temperature. startTs null means start immediately. */
+    suspend fun setOverride(celsius: Double, startTs: Long?, endTs: Long): OverrideResult {
+        val json = JsonObject().apply {
+            addProperty("temp", celsius)
+            if (startTs != null) addProperty("start", startTs)
+            addProperty("end", endTs)
+        }.toString()
+        return request<OverrideResult>("POST", "/api/override", json.toRequestBody(JSON), OverrideResult::class.java)
+    }
+
+    /** Clears the scheduled override; the scheduler falls back to user_target or config. */
+    suspend fun clearOverride(): OverrideResult =
+        request<OverrideResult>("DELETE", "/api/override", null, OverrideResult::class.java)
+
     private suspend fun <T> request(method: String, path: String, body: RequestBody?, type: Type): T =
         withContext(Dispatchers.IO) {
             val request = Request.Builder()

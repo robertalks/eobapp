@@ -38,6 +38,27 @@ data class ControlInfo(
     @SerializedName("target") val target: Double? = null,
     /** "app" when set from here, otherwise the scheduler's temperature_source ("config"/"device"). */
     @SerializedName("source") val source: String? = null,
+    /** Active or pending scheduled override; null when none is set. */
+    @SerializedName("override") val override: OverrideInfo? = null,
+)
+
+/** A time-bounded temperature override (part of /api/status → control). */
+data class OverrideInfo(
+    @SerializedName("temp") val temp: Double? = null,
+    /** Unix seconds; null means the override started immediately when it was set. */
+    @SerializedName("start") val start: Long? = null,
+    @SerializedName("end") val end: Long? = null,
+    /** True while the override is currently in effect. */
+    @SerializedName("active") val active: Boolean? = null,
+)
+
+/** Answer to POST/DELETE /api/override. */
+data class OverrideResult(
+    @SerializedName("ok") val ok: Boolean? = null,
+    @SerializedName("override_temp") val overrideTemp: Double? = null,
+    @SerializedName("override_start") val overrideStart: Long? = null,
+    @SerializedName("override_end") val overrideEnd: Long? = null,
+    @SerializedName("applied_now") val appliedNow: Boolean? = null,
 )
 
 /** Answer to POST/DELETE /api/target. */

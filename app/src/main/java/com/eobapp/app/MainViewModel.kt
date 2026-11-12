@@ -9,6 +9,7 @@ import com.eobapp.app.network.DailyRuntime
 import com.eobapp.app.network.HeatingCycle
 import com.eobapp.app.network.HistoryResponse
 import com.eobapp.app.network.EobApi
+import com.eobapp.app.network.OverrideInfo
 import com.eobapp.app.network.Reading
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.network.readings
@@ -63,6 +64,13 @@ sealed class TargetEdit {
     data class Failed(val message: String) : TargetEdit()
 }
 
+/** Progress of a scheduled override change from the app. */
+sealed class OverrideEdit {
+    data object Saving : OverrideEdit()
+    data class Done(val message: String) : OverrideEdit()
+    data class Failed(val message: String) : OverrideEdit()
+}
+
 sealed class TestResult {
     data object Running : TestResult()
     data class Ok(val summary: String) : TestResult()
@@ -81,6 +89,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _targetEdit = MutableStateFlow<TargetEdit?>(null)
     val targetEdit: StateFlow<TargetEdit?> = _targetEdit.asStateFlow()
+
+    private val _overrideEdit = MutableStateFlow<OverrideEdit?>(null)
+    val overrideEdit: StateFlow<OverrideEdit?> = _overrideEdit.asStateFlow()
 
     private var refreshJob: Job? = null
 
@@ -126,6 +137,65 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearTargetEdit() {
         if (_targetEdit.value !is TargetEdit.Saving) _targetEdit.value = null
+    }
+
+    fun setOverride(celsius: Double, startTs: Long?, endTs: Long) {
+        if (_overrideEdit.value is OverrideEdit.Saving) return
+        _overrideEdit.value = OverrideEdit.Saving
+        viewModelScope.launch {
+            try {
+                val r = api().setOverride(celsius, startTs, endTs)
+                _home.update { st ->
+                    val status = st.status
+                    val control = status?.control
+                    if (status == null || control == null) st
+                    else st.copy(status = status.copy(control = control.copy(
+                        override = OverrideInfo(
+                            temp = r.overrideTemp, start = r.overrideStart,
+                            end = r.overrideEnd, active = r.appliedNow
+                        )
+                    )))
+                }
+                _overrideEdit.value = OverrideEdit.Done(
+                    if (r.appliedNow == true) "Override active now." else "Override scheduled."
+                )
+                delay(4_000)
+                refreshJob?.cancel()
+                refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _overrideEdit.value = OverrideEdit.Failed(message(e))
+            }
+        }
+    }
+
+    fun clearOverride() {
+        if (_overrideEdit.value is OverrideEdit.Saving) return
+        _overrideEdit.value = OverrideEdit.Saving
+        viewModelScope.launch {
+            try {
+                api().clearOverride()
+                _home.update { st ->
+                    val status = st.status
+                    val control = status?.control
+                    if (status == null || control == null) st
+                    else st.copy(status = status.copy(control = control.copy(override = null)))
+                }
+                _overrideEdit.value = OverrideEdit.Done("Override cleared.")
+                delay(4_000)
+                refreshJob?.cancel()
+                refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _overrideEdit.value = OverrideEdit.Failed(message(e))
+            }
+        }
+    }
+
+    fun clearOverrideEdit() {
+        if (_overrideEdit.value !is OverrideEdit.Saving) _overrideEdit.value = null
     }
 
     /** Loads status, the chart range and the 14-day runtime together. */

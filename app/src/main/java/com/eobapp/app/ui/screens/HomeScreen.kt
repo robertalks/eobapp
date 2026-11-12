@@ -55,6 +55,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.eobapp.app.MainViewModel
 import com.eobapp.app.RANGES
 import com.eobapp.app.CYCLE_RANGES
+import com.eobapp.app.OverrideEdit
 import com.eobapp.app.TargetEdit
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.network.HeatingCycle
@@ -75,8 +76,10 @@ private const val REFRESH_MS = 60_000L
 fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
     val state by viewModel.home.collectAsState()
     val targetEdit by viewModel.targetEdit.collectAsState()
+    val overrideEdit by viewModel.overrideEdit.collectAsState()
     val c = LocalEobColors.current
     var showTargetDialog by remember { mutableStateOf(false) }
+    var showOverrideDialog by remember { mutableStateOf(false) }
 
     // A successful change closes the dialog; its message then shows on Home for a few seconds.
     LaunchedEffect(targetEdit) {
@@ -84,6 +87,14 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
             showTargetDialog = false
             delay(6_000)
             viewModel.clearTargetEdit()
+        }
+    }
+
+    LaunchedEffect(overrideEdit) {
+        if (overrideEdit is OverrideEdit.Done) {
+            showOverrideDialog = false
+            delay(6_000)
+            viewModel.clearOverrideEdit()
         }
     }
 
@@ -102,6 +113,24 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
             onDismiss = {
                 showTargetDialog = false
                 viewModel.clearTargetEdit()
+            }
+        )
+    }
+
+    if (showOverrideDialog && control != null) {
+        OverrideDialog(
+            control = control,
+            hasToken = viewModel.settings.getControlToken().isNotBlank(),
+            edit = overrideEdit,
+            onSet = { temp, start, end -> viewModel.setOverride(temp, start, end) },
+            onClear = { viewModel.clearOverride() },
+            onOpenSettings = {
+                showOverrideDialog = false
+                onOpenSettings()
+            },
+            onDismiss = {
+                showOverrideDialog = false
+                viewModel.clearOverrideEdit()
             }
         )
     }
@@ -170,10 +199,29 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     status, state.refreshedAt, nowMs,
                     onEditTarget = if (control?.enabled == true) {
                         { viewModel.clearTargetEdit(); showTargetDialog = true }
+                    } else null,
+                    onOpenOverride = if (control?.enabled == true) {
+                        { viewModel.clearOverrideEdit(); showOverrideDialog = true }
                     } else null
                 )
 
                 (targetEdit as? TargetEdit.Done)?.let { done ->
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.medium,
+                        color = c.card,
+                        border = BorderStroke(1.dp, c.good)
+                    ) {
+                        Text(
+                            done.message,
+                            color = c.good,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                        )
+                    }
+                }
+
+                (overrideEdit as? OverrideEdit.Done)?.let { done ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.medium,
@@ -277,7 +325,13 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
 
 /** The four status tiles, same wording and colours as the web dashboard. */
 @Composable
-private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long, onEditTarget: (() -> Unit)?) {
+private fun Tiles(
+    s: StatusResponse?,
+    refreshedAt: Long?,
+    nowMs: Long,
+    onEditTarget: (() -> Unit)?,
+    onOpenOverride: (() -> Unit)?,
+) {
     val c = LocalEobColors.current
     val hasReading = s?.ok == true && s.measured != null
     val nowSec = nowMs / 1000
@@ -303,6 +357,14 @@ private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long, onEditTar
         val target = s?.desired
         val lowTarget = s?.control?.target
         val forcedOff = hasReading && target != null && target <= 0
+        val override = s?.control?.override
+        val overrideSub = when {
+            override?.active == true && override.end != null ->
+                "override until ${clockTime(override.end)}"
+            override != null && override.active != true && override.start != null && override.end != null ->
+                "override from ${clockTime(override.start)} until ${clockTime(override.end)}"
+            else -> null
+        }
         Tile(
             label = "Target temperature",
             value = when {
@@ -311,8 +373,7 @@ private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long, onEditTar
                 else -> "OFF"
             },
             valueColor = if (forcedOff) c.bad else c.ink,
-            sub = when {
-                // During high tariff, say what the heater will run at when it comes back.
+            sub = overrideSub ?: when {
                 forcedOff && lowTarget != null -> "low tariff: %.1f °C".format(lowTarget)
                 s?.mode == "off" -> "forced off"
                 s?.control?.source == "app" -> "set from app"
@@ -343,6 +404,11 @@ private fun Tiles(s: StatusResponse?, refreshedAt: Long?, nowMs: Long, onEditTar
             } else "",
             modifier = Modifier.weight(1f)
         )
+    }
+    if (onOpenOverride != null) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onClick = onOpenOverride) { Text("Schedule override") }
+        }
     }
 }
 
