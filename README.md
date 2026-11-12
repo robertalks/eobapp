@@ -6,7 +6,8 @@ electricity tariff, a temperature chart and heater runtime per day — reading t
 JSON API directly.
 
 It shows what the scheduler and the thermostat are doing, and can change the **low-tariff
-target temperature** — nothing else; the scheduler stays in charge of when the heater may run.
+target temperature** and set **scheduled overrides** — nothing else; the scheduler stays in
+charge of when the heater may run.
 
 ---
 
@@ -54,6 +55,18 @@ low tariff it's applied immediately; during high tariff the heater stays off and
 "low tariff: …" — the value it will run at next. **Reset to scheduler default** goes back to the
 scheduler's own setting.
 
+## Scheduling a temperature override
+
+Tap **Schedule override** (below the status tiles) to set a time-bounded temperature that takes
+priority over the normal target for a specific period — useful for e.g. "heat at 18 °C from
+tomorrow 10:00 until Sunday 10:00, then fall back to the normal 13 °C".
+
+Pick the temperature (same − / + step picker), a start time ("Now" or a specific date and
+time), and an end time. The override only affects low-tariff periods — the heater still stays
+forced off during high tariff. The scheduler expires it automatically at the end time. While an
+override is active or pending, the Target temperature tile shows "override until …" or
+"override from … until …". **Clear current override** removes it early.
+
 This needs eob_scheduler with the control API, `control.enabled: true` and a `control.token`
 in its `config.yaml`, and the same token entered as **Control token** in the app's Settings.
 The token is separate from the Cloudflare service token: Cloudflare decides who may reach the
@@ -71,6 +84,8 @@ All from `eob_stats.py` in eob_scheduler:
 | `GET /api/cycles?hours=48` | recent heating cycles (start/end, duration, start temp) |
 | `POST /api/target` `{"target": 18.5}` | change the low-tariff target (control token) |
 | `DELETE /api/target` | back to the scheduler default (control token) |
+| `POST /api/override` `{"temp": 18.5, "end": <ts>, "start": <ts>}` | set a time-bounded override (control token) |
+| `DELETE /api/override` | clear the override (control token) |
 
 ## Building
 
