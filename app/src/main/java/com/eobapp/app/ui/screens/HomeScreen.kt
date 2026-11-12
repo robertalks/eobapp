@@ -406,8 +406,59 @@ private fun Tiles(
         )
     }
     if (onOpenOverride != null) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onOpenOverride) { Text("Schedule override") }
+        val override = s?.control?.override
+        if (override != null) {
+            OverrideCard(override, nowMs, onOpenOverride)
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onOpenOverride) { Text("Schedule override") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverrideCard(
+    override: com.eobapp.app.network.OverrideInfo,
+    nowMs: Long,
+    onClick: () -> Unit,
+) {
+    val c = LocalEobColors.current
+    val temp = override.temp
+    val end = override.end
+    val start = override.start
+    val active = override.active == true
+
+    val headline = when {
+        temp != null -> "Override active: %.1f °C".format(temp)
+        else -> "Override active"
+    }
+    val detail = when {
+        active && end != null -> "until ${clockTime(end)}"
+        !active && start != null && end != null -> "from ${clockTime(start)} until ${clockTime(end)}"
+        end != null -> "until ${clockTime(end)}"
+        else -> ""
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.medium,
+        color = c.card,
+        border = BorderStroke(1.dp, c.good)
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(headline, style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = c.good)
+                if (detail.isNotEmpty()) {
+                    Text(detail, style = MaterialTheme.typography.bodySmall, color = c.mute)
+                }
+            }
+            Text("Change", style = MaterialTheme.typography.bodySmall, color = c.good)
         }
     }
 }

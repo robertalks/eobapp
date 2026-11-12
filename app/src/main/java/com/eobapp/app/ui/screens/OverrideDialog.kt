@@ -67,15 +67,29 @@ fun OverrideDialog(
     val step = control.step?.takeIf { it > 0 } ?: 0.5
     fun snap(v: Double): Double = ((v / step).roundToInt() * step).coerceIn(min, max)
 
-    val defaultTemp = snap(control.target ?: 15.0)
+    val defaultTemp = snap(control.override?.temp ?: control.target ?: 15.0)
     var value by remember { mutableStateOf(defaultTemp) }
 
-    // Start: null means "now", non-null means a specific future time.
-    var startNow by remember { mutableStateOf(true) }
-    val defaultStart = LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0)
+    // Pre-populate from existing override if one is set.
+    val existingStart = control.override?.start
+    val existingEnd = control.override?.end
+    val zone = ZoneId.systemDefault()
+
+    var startNow by remember {
+        mutableStateOf(existingStart == null || control.override?.active == true)
+    }
+    val defaultStart = if (existingStart != null && control.override?.active != true) {
+        java.time.Instant.ofEpochSecond(existingStart).atZone(zone).toLocalDateTime()
+    } else {
+        LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0)
+    }
     var startDt by remember { mutableStateOf(defaultStart) }
 
-    val defaultEnd = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
+    val defaultEnd = if (existingEnd != null) {
+        java.time.Instant.ofEpochSecond(existingEnd).atZone(zone).toLocalDateTime()
+    } else {
+        LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
+    }
     var endDt by remember { mutableStateOf(defaultEnd) }
 
     val saving = edit is OverrideEdit.Saving
@@ -118,7 +132,7 @@ fun OverrideDialog(
 
     AlertDialog(
         onDismissRequest = { if (!saving) onDismiss() },
-        title = { Text("Schedule override") },
+        title = { Text(if (control.override != null) "Edit override" else "Schedule override") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
