@@ -1,9 +1,12 @@
 package com.eobapp.app
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -18,12 +21,22 @@ class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
+    private val requestNotificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            // Permission granted or denied — either way the worker is already scheduled and will
+            // skip posting if the permission is absent.
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Android 15+ forces edge-to-edge for apps targeting API 35 or higher. Opting in
-        // explicitly gives consistent system-bar styling on older versions too; each screen's
-        // Scaffold already pads content clear of the bars.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        OverrideMonitorWorker.schedule(this)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         setContent {
             EobTheme {
                 EobApp(viewModel)

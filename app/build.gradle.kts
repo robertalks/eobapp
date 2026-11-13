@@ -12,8 +12,8 @@ android {
         applicationId = "com.eobapp.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.1"
+        versionCode = 6
+        versionName = "1.4.0"
     }
 
     /**
@@ -83,6 +83,7 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     // Service-token secret lives in the Android keystore-backed encrypted prefs.
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
