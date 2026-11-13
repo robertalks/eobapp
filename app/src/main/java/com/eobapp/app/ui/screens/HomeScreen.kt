@@ -358,18 +358,21 @@ private fun Tiles(
         val lowTarget = s?.control?.target
         val forcedOff = hasReading && target != null && target <= 0
         val override = s?.control?.override
+        val overrideActive = override?.active == true
         val overrideSub = when {
-            override?.active == true && override.end != null ->
+            overrideActive && override?.end != null ->
                 "override until ${clockTime(override.end)}"
-            override != null && override.active != true && override.start != null && override.end != null ->
+            override != null && !overrideActive && override.start != null && override.end != null ->
                 "override from ${clockTime(override.start)} until ${clockTime(override.end)}"
             else -> null
         }
+        // Show override temp while active; otherwise fall back to desired (the scheduler's current target).
+        val displayTemp = if (overrideActive && override?.temp != null) override.temp else target
         Tile(
             label = "Target temperature",
             value = when {
-                !hasReading || target == null -> "–"
-                target > 0 -> "%.1f °C".format(target)
+                !hasReading || displayTemp == null -> "–"
+                displayTemp > 0 -> "%.1f °C".format(displayTemp)
                 else -> "OFF"
             },
             valueColor = if (forcedOff) c.bad else c.ink,
