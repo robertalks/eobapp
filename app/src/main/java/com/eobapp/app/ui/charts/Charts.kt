@@ -133,17 +133,19 @@ fun TemperatureChart(
             v += step
         }
 
-        // Time labels on local clock boundaries (every 1 h / 3–6 h / day).
+        // Time labels on local clock boundaries (every 1 h / 3–6 h / day / week).
         val narrow = w < 600.dp.toPx()
         val stepHours = when {
             hours <= 6 -> 1
             hours <= 24 -> if (narrow) 6 else 3
-            else -> 24
+            hours <= 168 -> 24
+            else -> 24 * 7
         }
+        val stepDays = stepHours / 24
         val cal = Calendar.getInstance().apply {
             timeInMillis = t0 * 1000
             set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            if (stepHours == 24) {
+            if (stepHours >= 24) {
                 set(Calendar.HOUR_OF_DAY, 0); add(Calendar.DAY_OF_MONTH, 1)
             } else {
                 add(Calendar.HOUR_OF_DAY, 1)
@@ -152,11 +154,11 @@ fun TemperatureChart(
         }
         while (cal.timeInMillis / 1000 < now) {
             val tt = cal.timeInMillis / 1000
-            val text = (if (stepHours == 24) dayFmt else hourFmt).format(Date(cal.timeInMillis))
+            val text = (if (stepHours >= 24) dayFmt else hourFmt).format(Date(cal.timeInMillis))
             val lay = tm.measure(text, labelStyle)
             val lx = (x(tt) - lay.size.width / 2f).coerceIn(0f, w - lay.size.width)
             drawText(lay, topLeft = Offset(lx, h - lay.size.height))
-            if (stepHours == 24) cal.add(Calendar.DAY_OF_MONTH, 1) else cal.add(Calendar.HOUR_OF_DAY, stepHours)
+            if (stepHours >= 24) cal.add(Calendar.DAY_OF_MONTH, stepDays) else cal.add(Calendar.HOUR_OF_DAY, stepHours)
         }
 
         // Lines: break wherever readings are missing for more than a few intervals.
