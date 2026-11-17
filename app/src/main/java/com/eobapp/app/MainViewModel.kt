@@ -26,10 +26,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Chart ranges offered on Home, in hours. */
-val RANGES = listOf(6, 24, 168)
+val RANGES = listOf(6, 24, 168, 720, 1440)
 
 /** Ranges offered for the "Recent heating" list, in hours. */
-val CYCLE_RANGES = listOf(24, 48, 168)
+val CYCLE_RANGES = listOf(24, 48, 168, 720, 1440)
 
 data class HomeState(
     val status: StatusResponse? = null,
