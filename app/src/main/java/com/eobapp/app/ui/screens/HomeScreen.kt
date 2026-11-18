@@ -70,6 +70,12 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+private val hmFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+private val cycleDayFmt = SimpleDateFormat("d MMM", Locale.getDefault())
+private val clockTimeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+private val clockTimeDayFmt = SimpleDateFormat("EEE HH:mm", Locale.getDefault())
+private val refreshedAtFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+
 private const val REFRESH_MS = 60_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -239,20 +245,14 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                 }
 
                 Card {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Temperature", style = MaterialTheme.typography.titleMedium)
-                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            for (h in RANGES) {
-                                FilterChip(
-                                    selected = state.rangeHours == h,
-                                    onClick = { viewModel.setRange(h) },
-                                    label = { Text(if (h < 48) "$h h" else "${h / 24} d") }
-                                )
-                            }
+                    Text("Temperature", style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (h in RANGES) {
+                            FilterChip(
+                                selected = state.rangeHours == h,
+                                onClick = { viewModel.setRange(h) },
+                                label = { Text(if (h < 48) "$h h" else "${h / 24} d") }
+                            )
                         }
                     }
                     TemperatureChart(state.readings, state.interval, state.rangeHours)
@@ -276,20 +276,14 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
 
                 if (state.cyclesSupported) {
                     Card {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Recent heating", style = MaterialTheme.typography.titleMedium)
-                            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                for (h in CYCLE_RANGES) {
-                                    FilterChip(
-                                        selected = state.cyclesHours == h,
-                                        onClick = { viewModel.setCyclesRange(h) },
-                                        label = { Text(if (h < 168) "$h h" else "${h / 24} d") }
-                                    )
-                                }
+                        Text("Recent heating", style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (h in CYCLE_RANGES) {
+                                FilterChip(
+                                    selected = state.cyclesHours == h,
+                                    onClick = { viewModel.setCyclesRange(h) },
+                                    label = { Text(if (h < 168) "$h h" else "${h / 24} d") }
+                                )
                             }
                         }
                         if (state.cycles.isEmpty()) {
@@ -312,7 +306,7 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
 
                 state.refreshedAt?.let {
                     Text(
-                        "Updated " + SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(it)) +
+                        "Updated " + refreshedAtFmt.format(Date(it)) +
                             " · " + viewModel.settings.getHost(),
                         style = MaterialTheme.typography.bodySmall,
                         color = c.mute,
@@ -602,7 +596,7 @@ private fun TariffPill(low: Boolean?) {
 }
 
 private fun hm(epochSec: Long?): String =
-    if (epochSec == null) "…" else SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(epochSec * 1000))
+    if (epochSec == null) "…" else hmFmt.format(Date(epochSec * 1000))
 
 /** "Today", "Yesterday", or "5 Oct". */
 private fun cycleDay(epochSec: Long): String {
@@ -615,12 +609,12 @@ private fun cycleDay(epochSec: Long): String {
     return when {
         sameDay(d, today) -> "Today"
         sameDay(d, yesterday) -> "Yesterday"
-        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(epochSec * 1000))
+        else -> cycleDayFmt.format(Date(epochSec * 1000))
     }
 }
 
 /** "31 min", "2 h 5 min" — same wording as the web dashboard. */
-fun duration(seconds: Long): String {
+internal fun duration(seconds: Long): String {
     val s = seconds.coerceAtLeast(0)
     val h = s / 3600
     val m = (s % 3600) / 60
@@ -633,6 +627,6 @@ private fun clockTime(epochSec: Long): String {
     val today = Calendar.getInstance()
     val sameDay = then.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
         then.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
-    val pattern = if (sameDay) "HH:mm" else "EEE HH:mm"
-    return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(epochSec * 1000))
+    val pattern = if (sameDay) clockTimeFmt else clockTimeDayFmt
+    return pattern.format(Date(epochSec * 1000))
 }

@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import com.eobapp.app.R
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
@@ -103,7 +104,7 @@ class OverrideMonitorWorker(
         )
 
         val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(pi)

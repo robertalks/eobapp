@@ -221,12 +221,13 @@ fun OverrideDialog(
             }
         },
         confirmButton = {
+            val endAfterStart = endDt > (if (startNow) LocalDateTime.now() else startDt)
             TextButton(
                 onClick = {
                     val startTs = if (startNow) null else startDt.toEpochSecond()
                     onSet(value, startTs, endDt.toEpochSecond())
                 },
-                enabled = !saving
+                enabled = !saving && endAfterStart
             ) { Text("Set override") }
         },
         dismissButton = {

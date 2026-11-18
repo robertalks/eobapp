@@ -95,9 +95,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private var refreshJob: Job? = null
 
-    private fun api() = EobApi(
-        settings.getHost(), settings.getClientId(), settings.getClientSecret(), settings.getControlToken()
-    )
+    private var cachedApi: EobApi? = null
+    private var cachedHost: String = ""
+
+    private fun api(): EobApi {
+        val host = settings.getHost()
+        if (cachedApi == null || cachedHost != host) {
+            cachedApi = EobApi(host, settings.getClientId(), settings.getClientSecret(), settings.getControlToken())
+            cachedHost = host
+        }
+        return cachedApi!!
+    }
 
     /** Changes the low-tariff target (null = back to the scheduler's own setting). */
     fun setTarget(celsius: Double?) {
@@ -251,13 +259,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setCyclesRange(hours: Int) {
         if (hours == _home.value.cyclesHours) return
-        _home.update { it.copy(cyclesHours = hours) }
+        _home.update { it.copy(cyclesHours = hours, cycles = emptyList()) }
         refreshJob?.cancel()
         refresh()
     }
 
     fun saveSettings(host: String, clientId: String, clientSecret: String, controlToken: String) {
         settings.save(host, clientId, clientSecret, controlToken)
+        cachedApi = null
         // Data from a previous server must not linger under the new address.
         _home.value = HomeState(rangeHours = _home.value.rangeHours)
         refreshJob?.cancel()
