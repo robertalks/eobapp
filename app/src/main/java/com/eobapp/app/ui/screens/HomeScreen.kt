@@ -409,7 +409,7 @@ private fun Tiles(
             OverrideCard(override, nowMs, onOpenOverride)
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onOpenOverride) { Text("Schedule override") }
+                TextButton(onClick = onOpenOverride) { Text("Schedule override", style = MaterialTheme.typography.bodyMedium) }
             }
         }
     }
