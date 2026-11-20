@@ -269,15 +269,17 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                 }
 
                 Card {
-                    Text("Heater runtime per day", style = MaterialTheme.typography.titleMedium)
                     val low = state.daily.sumOf { it.low }
                     val total = state.daily.sumOf { it.total }
-                    Text(
-                        if (total == 0) "last 14 days: no heating recorded"
-                        else "last 14 days: ${duration(total * 60L)}, ${100 * low / total}% in low tariff",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.mute
-                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Heater runtime per day", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            if (total == 0) "last 14 days: no data"
+                            else "last 14 days: ${duration(total * 60L)}, ${100 * low / total}% low",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = c.mute
+                        )
+                    }
                     RuntimeChart(state.daily)
                     Legend(listOf(c.good to "low tariff", c.bad to "high tariff", c.unknown to "unknown"))
                 }
@@ -690,6 +692,7 @@ private fun PowerCharts(
     devices.forEach { dev ->
         val devDaily = dailyByName[dev.name]?.days.orEmpty()
         Card {
+            val totalKwh = devDaily.sumOf { it.kwh }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -699,6 +702,12 @@ private fun PowerCharts(
                     "${dev.name ?: "Power meter"} · daily usage",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
+                )
+                Text(
+                    if (devDaily.isEmpty()) "last 14 days: no data"
+                    else "last 14 days: ${"%.2f".format(totalKwh)} kWh",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.mute
                 )
                 IconButton(
                     onClick = { onRefresh(dev.name) },
@@ -712,13 +721,6 @@ private fun PowerCharts(
                     )
                 }
             }
-            val totalKwh = devDaily.sumOf { it.kwh }
-            Text(
-                if (devDaily.isEmpty()) "last 14 days: no data"
-                else "last 14 days: ${"%.2f".format(totalKwh)} kWh",
-                style = MaterialTheme.typography.bodySmall,
-                color = c.mute
-            )
             if (devDaily.isNotEmpty()) {
                 PowerUsageChart(devDaily)
             }
