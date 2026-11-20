@@ -248,6 +248,10 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     }
                 }
 
+                if (state.powerDevices.isNotEmpty()) {
+                    PowerTiles(state.powerDevices)
+                }
+
                 Card {
                     Text("Temperature", style = MaterialTheme.typography.titleMedium)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -309,10 +313,9 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                 }
 
                 if (state.powerDevices.isNotEmpty()) {
-                    PowerSection(
+                    PowerCharts(
                         devices = state.powerDevices,
                         daily = state.powerDaily,
-                        nowMs = nowMs,
                         onRefresh = { name -> viewModel.refreshPowerDevice(name) }
                     )
                 }
@@ -649,14 +652,8 @@ private fun clockTime(epochSec: Long): String {
 }
 
 @Composable
-private fun PowerSection(
-    devices: List<PowerDeviceStatus>,
-    daily: List<PowerDeviceDaily>,
-    nowMs: Long,
-    onRefresh: (String?) -> Unit,
-) {
+private fun PowerTiles(devices: List<PowerDeviceStatus>) {
     val c = LocalEobColors.current
-
     Row(
         Modifier.fillMaxWidth().height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -680,7 +677,14 @@ private fun PowerSection(
             )
         }
     }
+}
 
+@Composable
+private fun PowerCharts(
+    devices: List<PowerDeviceStatus>,
+    daily: List<PowerDeviceDaily>,
+    onRefresh: (String?) -> Unit,
+) {
     val dailyByName = daily.associateBy { it.name }
     devices.forEach { dev ->
         val devDaily = dailyByName[dev.name]?.days.orEmpty()
