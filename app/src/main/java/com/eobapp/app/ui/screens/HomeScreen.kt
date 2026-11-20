@@ -685,6 +685,7 @@ private fun PowerCharts(
     daily: List<PowerDeviceDaily>,
     onRefresh: (String?) -> Unit,
 ) {
+    val c = LocalEobColors.current
     val dailyByName = daily.associateBy { it.name }
     devices.forEach { dev ->
         val devDaily = dailyByName[dev.name]?.days.orEmpty()
