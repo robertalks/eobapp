@@ -234,8 +234,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     // Cycles is an add-on: an older scheduler has no /api/cycles, so its
                     // failure must not take the rest of the screen down with it.
                     val cy = async { runCatching { api.cycles(cyclesHours) }.getOrNull() }
-                    val pw = async { runCatching { api.powerStatus() }.getOrNull() }
-                    val pwd = async { runCatching { api.powerDaily(14) }.getOrNull() }
+                    // Trigger a fresh Shelly poll before reading back the result.
+                    val pw = async {
+                        runCatching { api.powerRefresh(null) }
+                        delay(2_000)
+                        runCatching { api.powerStatus() }.getOrNull()
+                    }
+                    val pwd = async {
+                        delay(2_000)
+                        runCatching { api.powerDaily(14) }.getOrNull()
+                    }
                     Refreshed(s.await(), h.await(), d.await(), cy.await(), pw.await(), pwd.await())
                 }
                 _home.update {
