@@ -712,9 +712,14 @@ private fun PowerCharts(
                     )
                 }
             }
-            if (devDaily.isEmpty()) {
-                Text("No data yet.", style = MaterialTheme.typography.bodySmall, color = c.mute)
-            } else {
+            val totalKwh = devDaily.sumOf { it.kwh }
+            Text(
+                if (devDaily.isEmpty()) "last 14 days: no data"
+                else "last 14 days: ${"%.2f".format(totalKwh)} kWh",
+                style = MaterialTheme.typography.bodySmall,
+                color = c.mute
+            )
+            if (devDaily.isNotEmpty()) {
                 PowerUsageChart(devDaily)
             }
         }

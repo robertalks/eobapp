@@ -267,12 +267,11 @@ fun Legend(items: List<Pair<Color, String>>, modifier: Modifier = Modifier) {
 /** Daily kWh bar chart for one Shelly power meter device. */
 @Composable
 fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
+    val c = LocalEobColors.current
     val textMeasurer = rememberTextMeasurer()
-    val axisStyle = TextStyle(fontSize = 10.sp, color = Color(0xFF9CA3AF))
-    val barColor = Color(0xFF2563EB)
-    val lineColor = Color(0xFFE5E7EB)
+    val labelStyle = TextStyle(fontSize = 11.sp, color = c.mute)
 
-    Canvas(modifier = modifier.fillMaxWidth().height(140.dp)) {
+    Canvas(modifier = modifier.fillMaxWidth().height(180.dp)) {
         if (days.isEmpty()) return@Canvas
         val n = days.size
         val maxKwh = days.maxOfOrNull { it.kwh } ?: 0.0
@@ -282,7 +281,7 @@ fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
         val top = if (maxKwh == 0.0) 1.0 else niceStep((maxKwh * scale) / 4) * 4
 
         val L = 44.dp.toPx()
-        val R = 8.dp.toPx()
+        val R = 6.dp.toPx()
         val T = 8.dp.toPx()
         val B = 22.dp.toPx()
         val chartW = size.width - L - R
@@ -291,13 +290,13 @@ fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
         val steps = listOf(0.0, top / 2.0, top)
         for (v in steps) {
             val yv = T + (1.0 - v / top).toFloat() * chartH
-            drawLine(lineColor, Offset(L, yv), Offset(size.width - R, yv), strokeWidth = 1.dp.toPx())
+            drawLine(c.line, Offset(L, yv), Offset(size.width - R, yv), strokeWidth = 1.dp.toPx())
             val label = when {
                 v == 0.0 -> "0"
                 v == top -> "${fmtAxis(top)} $unit"
                 else -> fmtAxis(v)
             }
-            val tl = textMeasurer.measure(label, axisStyle)
+            val tl = textMeasurer.measure(label, labelStyle)
             drawText(tl, topLeft = Offset(L - tl.size.width - 4.dp.toPx(), yv - tl.size.height / 2f))
         }
 
@@ -306,7 +305,7 @@ fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
             val h = if (top == 0.0) 0f else (d.kwh * scale / top).toFloat() * chartH
             if (h > 0f) {
                 drawRect(
-                    barColor,
+                    c.good,
                     topLeft = Offset(L + i * bw + bw * 0.18f, T + chartH - h),
                     size = Size(bw * 0.64f, h)
                 )
@@ -319,7 +318,7 @@ fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
                 val label = if (parts.size == 3)
                     "${parts[2].trimStart('0')}.${parts[1].trimStart('0')}."
                 else d.day
-                val tl = textMeasurer.measure(label, axisStyle)
+                val tl = textMeasurer.measure(label, labelStyle)
                 drawText(tl, topLeft = Offset(L + i * bw + bw / 2f - tl.size.width / 2f, size.height - tl.size.height))
             }
         }
