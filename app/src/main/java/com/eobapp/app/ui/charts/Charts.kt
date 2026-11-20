@@ -31,6 +31,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eobapp.app.network.DailyRuntime
+import com.eobapp.app.network.PowerDailyDay
 import com.eobapp.app.network.Reading
 import com.eobapp.app.ui.theme.LocalEobColors
 import java.text.SimpleDateFormat
@@ -258,6 +259,68 @@ fun Legend(items: List<Pair<Color, String>>, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(5.dp))
                 Text(label, style = MaterialTheme.typography.bodySmall, color = LocalEobColors.current.mute)
+            }
+        }
+    }
+}
+
+/** Daily kWh bar chart for one Shelly power meter device. */
+@Composable
+fun PowerUsageChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
+    val textMeasurer = rememberTextMeasurer()
+    val axisStyle = TextStyle(fontSize = 10.sp, color = Color(0xFF9CA3AF))
+    val barColor = Color(0xFF2563EB)
+    val lineColor = Color(0xFFE5E7EB)
+
+    Canvas(modifier = modifier.fillMaxWidth().height(140.dp)) {
+        if (days.isEmpty()) return@Canvas
+        val n = days.size
+        val maxKwh = days.maxOfOrNull { it.kwh } ?: 0.0
+        val useWh = maxKwh < 0.5 && maxKwh > 0.0
+        val scale = if (useWh) 1000.0 else 1.0
+        val unit = if (useWh) "Wh" else "kWh"
+        val top = if (maxKwh == 0.0) 1.0 else niceStep((maxKwh * scale) / 4) * 4
+
+        val L = 44.dp.toPx()
+        val R = 8.dp.toPx()
+        val T = 8.dp.toPx()
+        val B = 22.dp.toPx()
+        val chartW = size.width - L - R
+        val chartH = size.height - T - B
+
+        val steps = listOf(0.0, top / 2.0, top)
+        for (v in steps) {
+            val yv = T + (1.0 - v / top).toFloat() * chartH
+            drawLine(lineColor, Offset(L, yv), Offset(size.width - R, yv), strokeWidth = 1.dp.toPx())
+            val label = when {
+                v == 0.0 -> "0"
+                v == top -> "${fmtAxis(top)} $unit"
+                else -> fmtAxis(v)
+            }
+            val tl = textMeasurer.measure(label, axisStyle)
+            drawText(tl, topLeft = Offset(L - tl.size.width - 4.dp.toPx(), yv - tl.size.height / 2f))
+        }
+
+        val bw = chartW / n
+        days.forEachIndexed { i, d ->
+            val h = if (top == 0.0) 0f else (d.kwh * scale / top).toFloat() * chartH
+            if (h > 0f) {
+                drawRect(
+                    barColor,
+                    topLeft = Offset(L + i * bw + bw * 0.18f, T + chartH - h),
+                    size = Size(bw * 0.64f, h)
+                )
+            }
+        }
+
+        days.forEachIndexed { i, d ->
+            if (bw >= 34.dp.toPx() || (n - 1 - i) % 2 == 0) {
+                val parts = d.day.split("-")
+                val label = if (parts.size == 3)
+                    "${parts[2].trimStart('0')}.${parts[1].trimStart('0')}."
+                else d.day
+                val tl = textMeasurer.measure(label, axisStyle)
+                drawText(tl, topLeft = Offset(L + i * bw + bw / 2f - tl.size.width / 2f, size.height - tl.size.height))
             }
         }
     }

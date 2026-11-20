@@ -58,9 +58,13 @@ import com.eobapp.app.RANGES
 import com.eobapp.app.CYCLE_RANGES
 import com.eobapp.app.OverrideEdit
 import com.eobapp.app.TargetEdit
+import com.eobapp.app.network.PowerDeviceDaily
+import com.eobapp.app.network.PowerDeviceStatus
+import com.eobapp.app.network.PowerDailyDay
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.network.HeatingCycle
 import com.eobapp.app.ui.charts.Legend
+import com.eobapp.app.ui.charts.PowerUsageChart
 import com.eobapp.app.ui.charts.RuntimeChart
 import com.eobapp.app.ui.charts.TemperatureChart
 import com.eobapp.app.ui.theme.LocalEobColors
@@ -304,6 +308,15 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     }
                 }
 
+                if (state.powerDevices.isNotEmpty()) {
+                    PowerSection(
+                        devices = state.powerDevices,
+                        daily = state.powerDaily,
+                        nowMs = nowMs,
+                        onRefresh = { name -> viewModel.refreshPowerDevice(name) }
+                    )
+                }
+
                 state.refreshedAt?.let {
                     Text(
                         "Updated " + refreshedAtFmt.format(Date(it)) +
@@ -469,6 +482,7 @@ private fun Tile(
     modifier: Modifier = Modifier,
     valueColor: Color = LocalEobColors.current.ink,
     subColor: Color = LocalEobColors.current.mute,
+    sub2: String = "",
     onClick: (() -> Unit)? = null,
 ) {
     val c = LocalEobColors.current
@@ -508,6 +522,9 @@ private fun Tile(
             )
             if (sub.isNotEmpty()) {
                 Text(sub, style = MaterialTheme.typography.bodySmall, color = subColor)
+            }
+            if (sub2.isNotEmpty()) {
+                Text(sub2, style = MaterialTheme.typography.bodySmall, color = subColor)
             }
         }
     }
@@ -629,4 +646,72 @@ private fun clockTime(epochSec: Long): String {
         then.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
     val pattern = if (sameDay) clockTimeFmt else clockTimeDayFmt
     return pattern.format(Date(epochSec * 1000))
+}
+
+@Composable
+private fun PowerSection(
+    devices: List<PowerDeviceStatus>,
+    daily: List<PowerDeviceDaily>,
+    nowMs: Long,
+    onRefresh: (String?) -> Unit,
+) {
+    val c = LocalEobColors.current
+
+    Row(
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        devices.forEach { dev ->
+            val stale = dev.ok == false
+            val ageStr = if (dev.age == null) "no data" else "updated ${duration(dev.age)} ago"
+            val totalStr = dev.totalKwh?.let { kwh ->
+                if (kwh >= 1.0) "%.2f kWh total".format(kwh)
+                else "%.0f Wh total".format(kwh * 1000)
+            } ?: "– total"
+            val powerStr = dev.powerW?.let { "%.1f W".format(it) } ?: "–"
+            Tile(
+                label = dev.name ?: "Power meter",
+                value = powerStr,
+                valueColor = if (stale) c.bad else c.ink,
+                sub = totalStr,
+                sub2 = ageStr,
+                subColor = if (stale) c.bad else c.mute,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+
+    val dailyByName = daily.associateBy { it.name }
+    devices.forEach { dev ->
+        val devDaily = dailyByName[dev.name]?.days.orEmpty()
+        Card {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "${dev.name ?: "Power meter"} · daily usage",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { onRefresh(dev.name) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Refresh,
+                        contentDescription = "Refresh ${dev.name}",
+                        tint = c.mute,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            if (devDaily.isEmpty()) {
+                Text("No data yet.", style = MaterialTheme.typography.bodySmall, color = c.mute)
+            } else {
+                PowerUsageChart(devDaily)
+            }
+        }
+    }
 }

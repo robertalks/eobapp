@@ -94,6 +94,25 @@ class EobApi(
     suspend fun clearOverride(): OverrideResult =
         request<OverrideResult>("DELETE", "/api/override", null, OverrideResult::class.java)
 
+    suspend fun powerStatus(): PowerStatusResponse =
+        request<PowerStatusResponse>("GET", "/api/power/status", null, PowerStatusResponse::class.java)
+
+    suspend fun powerDaily(days: Int): PowerDailyResponse {
+        val type = object : TypeToken<PowerDailyResponse>() {}.type
+        return request<PowerDailyResponse>("GET", "/api/power/daily?days=$days", null, type)
+    }
+
+    suspend fun powerRefresh(name: String?) {
+        val json = if (name != null)
+            com.google.gson.JsonObject().apply { addProperty("name", name) }.toString()
+        else "{}"
+        request<com.google.gson.JsonObject>(
+            "POST", "/api/power/refresh",
+            json.toRequestBody(JSON),
+            com.google.gson.JsonObject::class.java
+        )
+    }
+
     private suspend fun <T> request(method: String, path: String, body: RequestBody?, type: Type): T =
         withContext(Dispatchers.IO) {
             val request = Request.Builder()

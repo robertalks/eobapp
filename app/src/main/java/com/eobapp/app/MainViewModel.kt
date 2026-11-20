@@ -10,6 +10,10 @@ import com.eobapp.app.network.HeatingCycle
 import com.eobapp.app.network.HistoryResponse
 import com.eobapp.app.network.EobApi
 import com.eobapp.app.network.OverrideInfo
+import com.eobapp.app.network.PowerDeviceDaily
+import com.eobapp.app.network.PowerDeviceStatus
+import com.eobapp.app.network.PowerDailyResponse
+import com.eobapp.app.network.PowerStatusResponse
 import com.eobapp.app.network.Reading
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.network.readings
@@ -47,6 +51,8 @@ data class HomeState(
     val error: String? = null,
     /** Phone clock (ms) of the last successful refresh. */
     val refreshedAt: Long? = null,
+    val powerDevices: List<PowerDeviceStatus> = emptyList(),
+    val powerDaily: List<PowerDeviceDaily> = emptyList(),
 )
 
 /** One refresh's worth of data; cycles is null when the scheduler has no /api/cycles. */
@@ -55,6 +61,8 @@ private data class Refreshed(
     val history: HistoryResponse,
     val daily: List<DailyRuntime>,
     val cycles: CyclesResponse?,
+    val powerStatus: PowerStatusResponse?,
+    val powerDaily: PowerDailyResponse?,
 )
 
 /** Progress of a target-temperature change from the app. */
@@ -226,7 +234,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     // Cycles is an add-on: an older scheduler has no /api/cycles, so its
                     // failure must not take the rest of the screen down with it.
                     val cy = async { runCatching { api.cycles(cyclesHours) }.getOrNull() }
-                    Refreshed(s.await(), h.await(), d.await(), cy.await())
+                    val pw = async { runCatching { api.powerStatus() }.getOrNull() }
+                    val pwd = async { runCatching { api.powerDaily(14) }.getOrNull() }
+                    Refreshed(s.await(), h.await(), d.await(), cy.await(), pw.await(), pwd.await())
                 }
                 _home.update {
                     it.copy(
@@ -239,6 +249,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         loading = false,
                         error = null,
                         refreshedAt = System.currentTimeMillis(),
+                        powerDevices = result.powerStatus?.devices.orEmpty(),
+                        powerDaily = result.powerDaily?.devices.orEmpty(),
                     )
                 }
             } catch (e: CancellationException) {
@@ -302,6 +314,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearTest() {
         _test.value = null
+    }
+
+    fun refreshPowerDevice(name: String?) {
+        viewModelScope.launch {
+            runCatching { api().powerRefresh(name) }
+            delay(2_000)
+            runCatching {
+                val pw = api().powerStatus()
+                val pwd = api().powerDaily(14)
+                _home.update { it.copy(
+                    powerDevices = pw.devices.orEmpty(),
+                    powerDaily = pwd.devices.orEmpty(),
+                )}
+            }
+        }
     }
 
     private fun message(e: Exception): String =

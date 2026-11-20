@@ -117,6 +117,37 @@ data class DailyRuntime(
     val total: Int get() = low + high + unknown
 }
 
+/** GET /api/power/status */
+data class PowerStatusResponse(
+    @SerializedName("devices") val devices: List<PowerDeviceStatus>? = null,
+)
+
+data class PowerDeviceStatus(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("address") val address: String? = null,
+    @SerializedName("update_seconds") val updateSeconds: Int? = null,
+    @SerializedName("last_seen") val lastSeen: Long? = null,
+    @SerializedName("age") val age: Long? = null,
+    @SerializedName("power_w") val powerW: Double? = null,
+    @SerializedName("total_kwh") val totalKwh: Double? = null,
+    @SerializedName("ok") val ok: Boolean? = null,
+)
+
+/** GET /api/power/daily?days=14 */
+data class PowerDailyResponse(
+    @SerializedName("devices") val devices: List<PowerDeviceDaily>? = null,
+)
+
+data class PowerDeviceDaily(
+    @SerializedName("name") val name: String? = null,
+    @SerializedName("days") val days: List<PowerDailyDay>? = null,
+)
+
+data class PowerDailyDay(
+    @SerializedName("day") val day: String = "",
+    @SerializedName("kwh") val kwh: Double = 0.0,
+)
+
 /** GET /api/cycles?hours=N — one heating cycle (relay ON → OFF). */
 data class CyclesResponse(
     @SerializedName("since") val since: Long? = null,
