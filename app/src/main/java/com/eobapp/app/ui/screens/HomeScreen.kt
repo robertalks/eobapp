@@ -286,7 +286,6 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     PowerCharts(
                         devices = state.powerDevices,
                         daily = state.powerDaily,
-                        onRefresh = { name -> viewModel.refreshPowerDevice(name) }
                     )
                 }
 
@@ -683,7 +682,6 @@ private fun PowerTiles(devices: List<PowerDeviceStatus>) {
 private fun PowerCharts(
     devices: List<PowerDeviceStatus>,
     daily: List<PowerDeviceDaily>,
-    onRefresh: (String?) -> Unit,
 ) {
     val c = LocalEobColors.current
     val dailyByName = daily.associateBy { it.name }
@@ -691,24 +689,10 @@ private fun PowerCharts(
         val devDaily = dailyByName[dev.name]?.days.orEmpty()
         Card {
             val totalKwh = devDaily.sumOf { it.kwh }
-            Box(Modifier.fillMaxWidth()) {
-                Text(
-                    "${dev.name ?: "Power meter"} · daily usage",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.align(Alignment.CenterStart).padding(end = 36.dp)
-                )
-                IconButton(
-                    onClick = { onRefresh(dev.name) },
-                    modifier = Modifier.size(36.dp).align(Alignment.CenterEnd)
-                ) {
-                    Icon(
-                        Icons.Filled.Refresh,
-                        contentDescription = "Refresh ${dev.name}",
-                        tint = c.mute,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
+            Text(
+                "${dev.name ?: "Power meter"} · daily usage",
+                style = MaterialTheme.typography.titleMedium
+            )
             Text(
                 if (devDaily.isEmpty()) "last 14 days: no data"
                 else "last 14 days: ${"%.2f".format(totalKwh)} kWh",
