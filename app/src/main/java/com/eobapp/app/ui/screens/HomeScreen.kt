@@ -282,6 +282,14 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     Legend(listOf(c.good to "low tariff", c.bad to "high tariff", c.unknown to "unknown"))
                 }
 
+                if (state.powerDevices.isNotEmpty()) {
+                    PowerCharts(
+                        devices = state.powerDevices,
+                        daily = state.powerDaily,
+                        onRefresh = { name -> viewModel.refreshPowerDevice(name) }
+                    )
+                }
+
                 if (state.cyclesSupported) {
                     Card {
                         Text("Recent heating", style = MaterialTheme.typography.titleMedium)
@@ -310,14 +318,6 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                             )
                         }
                     }
-                }
-
-                if (state.powerDevices.isNotEmpty()) {
-                    PowerCharts(
-                        devices = state.powerDevices,
-                        daily = state.powerDaily,
-                        onRefresh = { name -> viewModel.refreshPowerDevice(name) }
-                    )
                 }
 
                 state.refreshedAt?.let {
