@@ -662,15 +662,15 @@ private fun PowerTiles(devices: List<PowerDeviceStatus>) {
             val stale = dev.ok == false
             val ageStr = if (dev.age == null) "no data" else "updated ${duration(dev.age)} ago"
             val totalStr = dev.totalKwh?.let { kwh ->
-                if (kwh >= 1.0) "%.2f kWh total".format(kwh)
-                else "%.0f Wh total".format(kwh * 1000)
-            } ?: "– total"
-            val powerStr = dev.powerW?.let { "%.1f W".format(it) } ?: "–"
+                if (kwh >= 1.0) "%.2f kWh".format(kwh)
+                else "%.0f Wh".format(kwh * 1000)
+            } ?: "–"
+            val powerStr = dev.powerW?.let { "%.1f W now".format(it) } ?: "–"
             Tile(
                 label = dev.name ?: "Power meter",
-                value = powerStr,
+                value = totalStr,
                 valueColor = if (stale) c.bad else c.ink,
-                sub = totalStr,
+                sub = powerStr,
                 sub2 = ageStr,
                 subColor = if (stale) c.bad else c.mute,
                 modifier = Modifier.weight(1f)
