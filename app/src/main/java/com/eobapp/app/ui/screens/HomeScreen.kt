@@ -691,19 +691,15 @@ private fun PowerCharts(
         val devDaily = dailyByName[dev.name]?.days.orEmpty()
         Card {
             val totalKwh = devDaily.sumOf { it.kwh }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Box(Modifier.fillMaxWidth()) {
                 Text(
                     "${dev.name ?: "Power meter"} · daily usage",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.align(Alignment.CenterStart).padding(end = 36.dp)
                 )
                 IconButton(
                     onClick = { onRefresh(dev.name) },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(36.dp).align(Alignment.CenterEnd)
                 ) {
                     Icon(
                         Icons.Filled.Refresh,
