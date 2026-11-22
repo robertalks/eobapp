@@ -1,6 +1,7 @@
 package com.eobapp.app
 
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,12 +10,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.eobapp.app.ui.screens.HomeScreen
 import com.eobapp.app.ui.screens.SettingsScreen
+import com.eobapp.app.ui.screens.ShellyDetailScreen
 import com.eobapp.app.ui.theme.EobTheme
 
 class MainActivity : ComponentActivity() {
@@ -56,7 +60,10 @@ fun EobApp(viewModel: MainViewModel) {
         composable("home") {
             HomeScreen(
                 viewModel = viewModel,
-                onOpenSettings = { navController.navigate("settings") { launchSingleTop = true } }
+                onOpenSettings = { navController.navigate("settings") { launchSingleTop = true } },
+                onNavigateToShelly = { name ->
+                    navController.navigate("shelly/${Uri.encode(name)}")
+                }
             )
         }
         composable("settings") {
@@ -73,6 +80,20 @@ fun EobApp(viewModel: MainViewModel) {
                     }
                 }
             )
+        }
+        composable("shelly/{name}") { backStackEntry ->
+            val name = Uri.decode(backStackEntry.arguments?.getString("name") ?: "")
+            val state by viewModel.home.collectAsState()
+            val device = state.powerDevices.firstOrNull { it.name == name }
+            if (device != null) {
+                ShellyDetailScreen(
+                    device = device,
+                    dailyAll = state.powerDaily,
+                    loading = state.loading,
+                    onBack = { navController.popBackStack() },
+                    onRefresh = { viewModel.refreshPowerDevice30(name) }
+                )
+            }
         }
     }
 }

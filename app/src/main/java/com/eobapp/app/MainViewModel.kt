@@ -339,6 +339,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshPowerDevice30(name: String) {
+        viewModelScope.launch {
+            _home.update { it.copy(loading = true) }
+            runCatching { api().powerRefresh(name) }
+            delay(2_000)
+            runCatching {
+                val pw = api().powerStatus()
+                val pwd = api().powerDaily(30)
+                _home.update { it.copy(
+                    loading = false,
+                    powerDevices = pw.devices.orEmpty(),
+                    powerDaily = pwd.devices.orEmpty(),
+                )}
+            }.onFailure {
+                _home.update { it.copy(loading = false) }
+            }
+        }
+    }
+
     private fun message(e: Exception): String =
         if (e is ApiException) e.message.orEmpty() else (e.message ?: e.javaClass.simpleName)
 }

@@ -58,13 +58,10 @@ import com.eobapp.app.RANGES
 import com.eobapp.app.CYCLE_RANGES
 import com.eobapp.app.OverrideEdit
 import com.eobapp.app.TargetEdit
-import com.eobapp.app.network.PowerDeviceDaily
 import com.eobapp.app.network.PowerDeviceStatus
-import com.eobapp.app.network.PowerDailyDay
 import com.eobapp.app.network.StatusResponse
 import com.eobapp.app.network.HeatingCycle
 import com.eobapp.app.ui.charts.Legend
-import com.eobapp.app.ui.charts.PowerUsageChart
 import com.eobapp.app.ui.charts.RuntimeChart
 import com.eobapp.app.ui.charts.TemperatureChart
 import com.eobapp.app.ui.theme.LocalEobColors
@@ -84,7 +81,7 @@ private const val REFRESH_MS = 60_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
+fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit, onNavigateToShelly: (String) -> Unit = {}) {
     val state by viewModel.home.collectAsState()
     val targetEdit by viewModel.targetEdit.collectAsState()
     val overrideEdit by viewModel.overrideEdit.collectAsState()
@@ -249,7 +246,7 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                 }
 
                 if (state.powerDevices.isNotEmpty()) {
-                    PowerTiles(state.powerDevices)
+                    PowerTiles(state.powerDevices, onDeviceClick = onNavigateToShelly)
                 }
 
                 Card {
@@ -284,13 +281,6 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                     )
                     RuntimeChart(state.daily)
                     Legend(listOf(c.good to "low tariff", c.bad to "high tariff", c.unknown to "unknown"))
-                }
-
-                if (state.powerDevices.isNotEmpty()) {
-                    PowerCharts(
-                        devices = state.powerDevices,
-                        daily = state.powerDaily,
-                    )
                 }
 
                 if (state.cyclesSupported) {
@@ -655,7 +645,7 @@ private fun clockTime(epochSec: Long): String {
 }
 
 @Composable
-private fun PowerTiles(devices: List<PowerDeviceStatus>) {
+private fun PowerTiles(devices: List<PowerDeviceStatus>, onDeviceClick: (String) -> Unit = {}) {
     val c = LocalEobColors.current
     Row(
         Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -676,36 +666,9 @@ private fun PowerTiles(devices: List<PowerDeviceStatus>) {
                 sub = powerStr,
                 sub2 = ageStr,
                 subColor = if (stale) c.bad else c.mute,
+                onClick = { onDeviceClick(dev.name ?: "") },
                 modifier = Modifier.weight(1f)
             )
-        }
-    }
-}
-
-@Composable
-private fun PowerCharts(
-    devices: List<PowerDeviceStatus>,
-    daily: List<PowerDeviceDaily>,
-) {
-    val c = LocalEobColors.current
-    val dailyByName = daily.associateBy { it.name }
-    devices.forEach { dev ->
-        val devDaily = dailyByName[dev.name]?.days.orEmpty()
-        Card {
-            val totalKwh = devDaily.sumOf { it.kwh }
-            Text(
-                "${dev.name ?: "Power meter"} · daily usage",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Text(
-                if (devDaily.isEmpty()) "last 14 days: no data"
-                else "last 14 days: ${"%.2f".format(totalKwh)} kWh",
-                style = MaterialTheme.typography.bodySmall,
-                color = c.mute
-            )
-            if (devDaily.isNotEmpty()) {
-                PowerUsageChart(devDaily)
-            }
         }
     }
 }
