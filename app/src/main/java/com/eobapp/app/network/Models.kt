@@ -113,6 +113,8 @@ data class DailyRuntime(
     @SerializedName("low") val low: Int = 0,
     @SerializedName("high") val high: Int = 0,
     @SerializedName("unknown") val unknown: Int = 0,
+    /** Wh consumed during heater-on intervals; null when no Shelly device is linked. */
+    @SerializedName("energy_wh") val energyWh: Int? = null,
 ) {
     val total: Int get() = low + high + unknown
 }

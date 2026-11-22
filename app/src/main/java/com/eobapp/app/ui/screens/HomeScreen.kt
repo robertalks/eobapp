@@ -271,10 +271,14 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit) {
                 Card {
                     val low = state.daily.sumOf { it.low }
                     val total = state.daily.sumOf { it.total }
+                    val totalWh = state.daily.mapNotNull { it.energyWh }.takeIf { it.isNotEmpty() }?.sum()
+                    val energyStr = totalWh?.let { wh ->
+                        if (wh >= 1000) " · ${"%.2f".format(wh / 1000.0)} kWh" else " · ${wh} Wh"
+                    } ?: ""
                     Text("Heater runtime per day", style = MaterialTheme.typography.titleMedium)
                     Text(
                         if (total == 0) "last 14 days: no data"
-                        else "last 14 days: ${duration(total * 60L)}, ${100 * low / total}% low",
+                        else "last 14 days: ${duration(total * 60L)}, ${100 * low / total}% low$energyStr",
                         style = MaterialTheme.typography.bodySmall,
                         color = c.mute
                     )
