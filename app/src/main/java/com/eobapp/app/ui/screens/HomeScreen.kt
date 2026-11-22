@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
@@ -168,7 +169,7 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit, onNavigateT
         topBar = {
             TopAppBar(
                 title = { Text("Water heater · BT725", style = MaterialTheme.typography.titleLarge) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = c.ground),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = c.card),
                 actions = {
                     if (state.loading) {
                         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
@@ -387,6 +388,7 @@ private fun Tiles(
                 else -> ""
             },
             onClick = onEditTarget,
+            showEditIcon = true,
             modifier = Modifier.weight(1f)
         )
     }
@@ -480,6 +482,7 @@ private fun Tile(
     subColor: Color = LocalEobColors.current.mute,
     sub2: String = "",
     onClick: (() -> Unit)? = null,
+    showEditIcon: Boolean = false,
 ) {
     val c = LocalEobColors.current
     val shape = MaterialTheme.shapes.medium
@@ -501,12 +504,21 @@ private fun Tile(
                     modifier = Modifier.weight(1f)
                 )
                 if (onClick != null) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        contentDescription = "Change",
-                        tint = c.mute,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    if (showEditIcon) {
+                        Icon(
+                            Icons.Filled.Edit,
+                            contentDescription = "Change",
+                            tint = c.mute,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        Icon(
+                            Icons.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = c.mute,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(2.dp))
@@ -535,7 +547,7 @@ private fun Card(content: @Composable () -> Unit) {
         color = c.card,
         border = BorderStroke(1.dp, c.line)
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             content()
         }
     }
