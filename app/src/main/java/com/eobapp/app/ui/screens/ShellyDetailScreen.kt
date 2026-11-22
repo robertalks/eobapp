@@ -37,11 +37,11 @@ import com.eobapp.app.network.PowerDeviceStatus
 import com.eobapp.app.ui.theme.LocalEobColors
 
 private val PERIODS = listOf(
-    "24h" to 1,
-    "48h" to 2,
-    "7d" to 7,
-    "14d" to 14,
-    "30d" to 30,
+    "Today" to 1,
+    "Last 2 days" to 2,
+    "Last 7 days" to 7,
+    "Last 14 days" to 14,
+    "Last 30 days" to 30,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

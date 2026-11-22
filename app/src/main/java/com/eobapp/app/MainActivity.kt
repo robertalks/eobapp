@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import com.eobapp.app.ui.screens.HomeScreen
 import com.eobapp.app.ui.screens.SettingsScreen
 import com.eobapp.app.ui.screens.ShellyDetailScreen
+import com.eobapp.app.network.PowerDeviceStatus
 import com.eobapp.app.ui.theme.EobTheme
 
 class MainActivity : ComponentActivity() {
@@ -89,6 +90,14 @@ fun EobApp(viewModel: MainViewModel) {
                 ShellyDetailScreen(
                     device = device,
                     dailyAll = state.powerDaily,
+                    loading = state.loading,
+                    onBack = { navController.popBackStack() },
+                    onRefresh = { viewModel.refreshPowerDevice30(name) }
+                )
+            } else {
+                ShellyDetailScreen(
+                    device = PowerDeviceStatus(name = name),
+                    dailyAll = emptyList(),
                     loading = state.loading,
                     onBack = { navController.popBackStack() },
                     onRefresh = { viewModel.refreshPowerDevice30(name) }
