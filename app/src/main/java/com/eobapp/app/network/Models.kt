@@ -133,6 +133,7 @@ data class PowerDeviceStatus(
     @SerializedName("power_w") val powerW: Double? = null,
     @SerializedName("total_kwh") val totalKwh: Double? = null,
     @SerializedName("ok") val ok: Boolean? = null,
+    @SerializedName("model") val model: String? = null,
 )
 
 /** GET /api/power/daily?days=14 */
