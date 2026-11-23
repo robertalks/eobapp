@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.material3.Surface
 import com.eobapp.app.ui.theme.LocalEobColors
+import com.eobapp.app.ui.screens.AppSplashScreen
 import com.eobapp.app.ui.screens.HomeScreen
 import com.eobapp.app.ui.screens.SettingsScreen
 import com.eobapp.app.ui.screens.ShellyDetailScreen
@@ -60,9 +61,20 @@ class MainActivity : ComponentActivity() {
 /** Home if the app knows where the scheduler is, otherwise Settings first. */
 @Composable
 fun EobApp(viewModel: MainViewModel) {
+    val state by viewModel.home.collectAsState()
     val navController = rememberNavController()
     // Decided once: changing a NavHost's start destination later would rebuild its graph.
     val start = remember { if (viewModel.settings.isConfigured()) "home" else "settings" }
+
+    // Show the splash until the first load resolves (status or error), but only when
+    // the app is configured — unconfigured goes straight to Settings.
+    val showSplash = viewModel.settings.isConfigured() &&
+        state.status == null && state.error == null
+
+    if (showSplash) {
+        AppSplashScreen()
+        return
+    }
 
     NavHost(navController = navController, startDestination = start) {
         composable("home") {

@@ -106,6 +106,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var cachedApi: EobApi? = null
     private var cachedHost: String = ""
 
+    init {
+        refresh()
+    }
+
     private fun api(): EobApi {
         val host = settings.getHost()
         if (cachedApi == null || cachedHost != host) {
