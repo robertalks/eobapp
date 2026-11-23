@@ -193,7 +193,8 @@ fun HomeScreen(viewModel: MainViewModel, onOpenSettings: () -> Unit, onNavigateT
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 24.dp)
+                .padding(top = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             state.error?.let { ErrorCard(it, onRetry = { viewModel.refresh() }) }
