@@ -31,6 +31,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.eobapp.app.network.DailyRuntime
+import com.eobapp.app.network.PowerDailyDay
 import com.eobapp.app.network.Reading
 import com.eobapp.app.ui.theme.LocalEobColors
 import java.text.SimpleDateFormat
@@ -258,6 +259,63 @@ fun Legend(items: List<Pair<Color, String>>, modifier: Modifier = Modifier) {
                 )
                 Spacer(Modifier.width(5.dp))
                 Text(label, style = MaterialTheme.typography.bodySmall, color = LocalEobColors.current.mute)
+            }
+        }
+    }
+}
+
+/** Daily kWh as bars: single green colour. */
+@Composable
+fun PowerBarChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
+    val c = LocalEobColors.current
+    val tm = rememberTextMeasurer()
+    val labelStyle = TextStyle(fontSize = 11.sp, color = c.mute)
+
+    Canvas(modifier.fillMaxWidth().height(180.dp)) {
+        val left = 36.dp.toPx()
+        val right = 6.dp.toPx()
+        val top = 8.dp.toPx()
+        val bottom = 22.dp.toPx()
+        val w = size.width
+        val h = size.height
+        val n = days.size
+
+        if (n == 0) {
+            val lay = tm.measure("No data", labelStyle)
+            drawText(lay, topLeft = Offset((w - lay.size.width) / 2f, (h - lay.size.height) / 2f))
+            return@Canvas
+        }
+
+        val maxKwh = days.maxOf { it.kwh }.coerceAtLeast(0.1)
+        val step = niceStep(maxKwh / 4)
+        val topKwh = ceil(maxKwh / step) * step
+
+        val bw = (w - left - right) / n
+        fun y(v: Double): Float = top + (1 - v / topKwh).toFloat() * (h - top - bottom)
+
+        var v = 0.0
+        while (v <= topKwh + 1e-9) {
+            val yy = y(v)
+            drawLine(c.line, Offset(left, yy), Offset(w - right, yy), 1.dp.toPx())
+            val lay = tm.measure(fmtAxis(v), labelStyle)
+            drawText(lay, topLeft = Offset(left - 5.dp.toPx() - lay.size.width, yy - lay.size.height / 2f))
+            v += step
+        }
+
+        val showEvery = if (bw >= 34.dp.toPx()) 1 else 2
+        days.forEachIndexed { i, d ->
+            if (d.kwh > 0) {
+                val yTop = y(d.kwh)
+                drawRect(
+                    c.good,
+                    topLeft = Offset(left + i * bw + bw * 0.18f, yTop),
+                    size = Size(bw * 0.64f, y(0.0) - yTop)
+                )
+            }
+            if ((n - 1 - i) % showEvery == 0 && d.day.length >= 10) {
+                val text = "${d.day.substring(8, 10).toInt()}.${d.day.substring(5, 7).toInt()}."
+                val lay = tm.measure(text, labelStyle)
+                drawText(lay, topLeft = Offset(left + i * bw + (bw - lay.size.width) / 2f, h - lay.size.height))
             }
         }
     }
