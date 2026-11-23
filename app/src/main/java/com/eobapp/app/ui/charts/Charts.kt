@@ -302,7 +302,7 @@ fun PowerBarChart(days: List<PowerDailyDay>, modifier: Modifier = Modifier) {
             v += step
         }
 
-        val showEvery = if (bw >= 34.dp.toPx()) 1 else 2
+        val showEvery = kotlin.math.ceil(n / 5.0).toInt().coerceAtLeast(1)
         days.forEachIndexed { i, d ->
             if (d.kwh > 0) {
                 val yTop = y(d.kwh)
