@@ -16,6 +16,8 @@ import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.material3.Surface
+import com.eobapp.app.ui.theme.LocalEobColors
 import com.eobapp.app.ui.screens.HomeScreen
 import com.eobapp.app.ui.screens.SettingsScreen
 import com.eobapp.app.ui.screens.ShellyDetailScreen
@@ -44,7 +46,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             EobTheme {
-                EobApp(viewModel)
+                val c = LocalEobColors.current
+                Surface(color = c.ground) {
+                    EobApp(viewModel)
+                }
             }
         }
     }
