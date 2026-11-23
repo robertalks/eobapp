@@ -74,7 +74,7 @@ fun ShellyDetailScreen(
 
     val days = dailyAll.firstOrNull { it.name == device.name }?.days.orEmpty()
 
-    var selectedNDays by remember { mutableStateOf(30) }
+    var selectedNDays by remember { mutableStateOf(7) }
 
     Scaffold(
         containerColor = c.ground,
