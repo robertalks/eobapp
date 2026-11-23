@@ -208,6 +208,3 @@ private fun ShellyCard(content: @Composable () -> Unit) {
         }
     }
 }
-
-internal fun sumDays(days: List<PowerDailyDay>, n: Int): Double =
-    days.takeLast(n).sumOf { it.kwh }
