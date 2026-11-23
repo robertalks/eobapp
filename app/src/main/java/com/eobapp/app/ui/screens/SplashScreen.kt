@@ -15,14 +15,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -89,19 +87,11 @@ fun AppSplashScreen() {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color(0xFF1F1E1C)),
-                contentAlignment = Alignment.Center,
-            ) {
-                val progValues = sparkProgress.map { it.value }
-                Canvas(Modifier.size(90.dp)) {
-                    drawHeaterIcon(flicker, progValues)
-                }
+            val progValues = sparkProgress.map { it.value }
+            Canvas(Modifier.size(180.dp)) {
+                drawHeaterIcon(flicker, progValues, c.ink)
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
                 "EOBApp",
                 style = MaterialTheme.typography.titleLarge,
@@ -116,11 +106,10 @@ fun AppSplashScreen() {
  * Draws the water-heater tank outline, the static flame body, and rising spark particles.
  * Coordinate system matches ic_launcher_foreground: 108×108 viewport mapped to [size].
  */
-private fun DrawScope.drawHeaterIcon(flicker: Float, sparkProgress: List<Float>) {
+private fun DrawScope.drawHeaterIcon(flicker: Float, sparkProgress: List<Float>, outlineColor: Color) {
     val s = size.width / 108f   // scale factor
 
     val stroke = Stroke(width = 3f * s, cap = StrokeCap.Round)
-    val outlineColor = Color(0xFFECEBE7)
     val flameOrange = Color(0xFFFB923C)
     val flameYellow = Color(0xFFFDE68A)
     val sparkColor   = Color(0xFFFBBF24)
