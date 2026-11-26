@@ -137,7 +137,20 @@ fun ShellyDetailScreen(
 
             // Daily usage card with range chips + bar chart
             ShellyCard {
-                Text("Daily usage", style = MaterialTheme.typography.titleMedium)
+                val rangeKwh = days.takeLast(selectedNDays).sumOf { it.kwh }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Daily usage", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "%.2f kWh".format(rangeKwh),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = c.good
+                    )
+                }
                 Row(
                     Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
